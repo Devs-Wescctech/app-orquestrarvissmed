@@ -185,4 +185,130 @@ export class DocplannerClient {
         return this.request('GET', '/api/v3/integration/services');
     }
 
-    async getBookings(faci
+    async getBookings(facilityId: string, doctorId: string, addressId: string, start: string, end: string): Promise<any> {
+        const s = start.includes('T') ? start : `${start}T00:00:00-03:00`;
+        const e = end.includes('T') ? end : `${end}T23:59:59-03:00`;
+        return this.request('GET', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/bookings?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`);
+    }
+
+    async getSlots(facilityId: string, doctorId: string, addressId: string, start: string, end: string): Promise<any> {
+        const s = start.includes('T') ? start : `${start}T00:00:00-03:00`;
+        const e = end.includes('T') ? end : `${end}T23:59:59-03:00`;
+        return this.request('GET', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/slots?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`);
+    }
+
+    async replaceSlots(facilityId: string, doctorId: string, addressId: string, payload: any): Promise<any> {
+        const slotCount = payload?.slots?.length || 0;
+        this.logger.log(`replaceSlots: sending ${slotCount} slots for doctor ${doctorId}, address ${addressId}`);
+        const result = await this.request('PUT', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/slots`, payload);
+        this.logger.log(`replaceSlots: response=${JSON.stringify(result)}`);
+        return result;
+    }
+
+    async bookSlot(facilityId: string, doctorId: string, addressId: string, slotStart: string, payload: any): Promise<any> {
+        const encodedStart = encodeURIComponent(slotStart);
+        return this.request('POST', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/slots/${encodedStart}/book`, payload);
+    }
+
+    async deleteSlots(facilityId: string, doctorId: string, addressId: string, date: string): Promise<any> {
+        const dateOnly = date.includes('T') ? date.split('T')[0] : date;
+        return this.request('DELETE', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/slots/${dateOnly}`);
+    }
+
+    async updateAddress(facilityId: string, doctorId: string, addressId: string, payload: any): Promise<any> {
+        return this.request('PATCH', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}`, payload);
+    }
+
+    async addAddressService(facilityId: string, doctorId: string, addressId: string, payload: any): Promise<any> {
+        return this.request('POST', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/services`, payload);
+    }
+
+    async updateAddressService(facilityId: string, doctorId: string, addressId: string, serviceId: string, payload: any): Promise<any> {
+        return this.request('PATCH', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/services/${serviceId}`, payload);
+    }
+
+    async deleteAddressService(facilityId: string, doctorId: string, addressId: string, serviceId: string): Promise<any> {
+        return this.request('DELETE', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/services/${serviceId}`);
+    }
+
+    async enableCalendar(facilityId: string, doctorId: string, addressId: string): Promise<any> {
+        this.logger.log(`enableCalendar: POST .../addresses/${addressId}/calendar/enable`);
+        const result = await this.request('POST', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/calendar/enable`);
+        this.logger.log(`enableCalendar: response=${JSON.stringify(result)}`);
+        return result;
+    }
+
+    async disableCalendar(facilityId: string, doctorId: string, addressId: string): Promise<any> {
+        this.logger.log(`disableCalendar: POST .../addresses/${addressId}/calendar/disable`);
+        const result = await this.request('POST', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/calendar/disable`);
+        this.logger.log(`disableCalendar: response=${JSON.stringify(result)}`);
+        return result;
+    }
+
+    async getCalendar(facilityId: string, doctorId: string, addressId: string): Promise<any> {
+        return this.request('GET', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/calendar`);
+    }
+
+    async getCalendarBreaks(facilityId: string, doctorId: string, addressId: string, since?: string): Promise<any> {
+        let path = `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/breaks`;
+        if (since) path += `?since=${encodeURIComponent(since)}`;
+        return this.request('GET', path);
+    }
+
+    async addCalendarBreak(facilityId: string, doctorId: string, addressId: string, payload: { since: string; till: string }): Promise<any> {
+        return this.request('POST', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/breaks`, payload);
+    }
+
+    async getCalendarBreak(facilityId: string, doctorId: string, addressId: string, breakId: string): Promise<any> {
+        return this.request('GET', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/breaks/${breakId}`);
+    }
+
+    async moveCalendarBreak(facilityId: string, doctorId: string, addressId: string, breakId: string, payload: { since: string; till: string }): Promise<any> {
+        return this.request('PUT', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/breaks/${breakId}`, payload);
+    }
+
+    async deleteCalendarBreak(facilityId: string, doctorId: string, addressId: string, breakId: string): Promise<any> {
+        return this.request('DELETE', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/breaks/${breakId}`);
+    }
+
+    async cancelBooking(facilityId: string, doctorId: string, addressId: string, bookingId: string, reason?: string): Promise<any> {
+        this.logger.log(`cancelBooking: DELETE booking ${bookingId} for doctor ${doctorId}`);
+        const body = reason ? { reason } : undefined;
+        return this.request('DELETE', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/bookings/${bookingId}`, body);
+    }
+
+    async moveBooking(facilityId: string, doctorId: string, addressId: string, bookingId: string, payload: {
+        address_service_id: number;
+        duration: number;
+        start: string;
+        address_id?: number;
+    }): Promise<any> {
+        this.logger.log(`moveBooking: POST move booking ${bookingId} to ${payload.start}`);
+        return this.request('POST', `/api/v3/integration/facilities/${facilityId}/doctors/${doctorId}/addresses/${addressId}/bookings/${bookingId}/move`, payload);
+    }
+
+    async getNotifications(limit: number = 100): Promise<any> {
+        return this.request('GET', `/api/v3/integration/notifications/multiple?limit=${limit}`);
+    }
+
+    async releaseFailedNotifications(): Promise<any> {
+        this.logger.log('releaseFailedNotifications: triggering re-queue of failed notifications');
+        return this.request('POST', '/api/v3/integration/notifications/release');
+    }
+}
+
+@Injectable()
+export class DocplannerService {
+    constructor(private configService: ConfigService) { }
+
+    createClient(domain: string, clientId: string, clientSecret: string): DocplannerClient {
+        const client = new DocplannerClient(this.configService);
+        client.setBaseUrl(domain);
+        // We start authentication but don't await here to match existing sync usage pattern.
+        // In a real scenario, the first call to the client would await this or authenticate would be called explicitly.
+        client.authenticate(clientId, clientSecret).catch(err => {
+            console.error('Docplanner background authentication failed:', err.message);
+        });
+        return client;
+    }
+}
